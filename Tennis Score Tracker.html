@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tennis Score Tracker - Optimized</title>
+  <style>
+    :root {
+      --primary-color: #1e88e5;
+      --danger-color: #e53935;
+      --warning-color: #ff9800;
+      --success-color: #c8e6c9;
+      --light-bg: #e3f2fd;
+      --server-color: gold;
+      --border-color: #ccc;
+      --stats-bg: #f5f5f5;
+    }
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: url('https://source.unsplash.com/1600x900/?tennis-court') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: #333;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      width: 90%;
+      max-width: 800px;
+      text-align: center;
+      position: relative;
+    }
+    
+    header {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-bottom: 20px;
+    }
+    
+    /* Form elements */
+    .input-group {
+      margin-bottom: 15px;
+    }
+    
+    .setup input,
+    .setup select,
+    .setup button,
+    .controls button {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      margin: 10px;
+      border: 1px solid var(--border-color);
+    }
+    
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s;
+    }
+    
+    button:hover {
+      opacity: 0.9;
+    }
+    
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .reset {
+      background-color: var(--danger-color);
+    }
+    
+    #backToStart {
+      background-color: var(--warning-color);
+    }
+    
+    .double-fault-btn {
+      background-color: #ff5722;
+      margin-left: 5px;
+    }
+    
+    /* Table styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      text-align: center;
+      font-size: 20px;
+    }
+    
+    th {
+      background-color: var(--light-bg);
+      color: var(--primary-color);
+    }
+    
+    td {
+      background-color: white;
+    }
+    
+    .server-indicator {
+      color: var(--server-color);
+      margin-left: 5px;
+    }
+    
+    .set-win {
+      background-color: var(--success-color);
+      font-weight: bold;
+    }
+    
+    #matchStatus {
+      font-size: 22px;
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-top: 10px;
+      min-height: 30px;
+    }
+    
+    /* Overlay styles - FIXED */
+    #coinTossOverlay {
+      display: none; /* Start hidden */
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      z-index: 10;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    
+    /* Apply flex properties only when visible */
+    #coinTossOverlay.visible {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    #coinTossOverlay p {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    
+    #coinTossOverlay button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      display: none;
+    }
+    
+    /* Results page styles */
+    #resultsSection {
+      display: none;
+    }
+    
+    .stats-container {
+      background-color: var(--stats-bg);
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      text-align: left;
+    }
+    
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .stats-header {
+      font-weight: bold;
+      color: var(--primary-color);
+      font-size: 18px;
+    }
+    
+    .player-stat {
+      flex: 1;
+      text-align: center;
+    }
+    
+    .winner-stat {
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      .controls {
+        display: flex;
+        flex-direction: column;
+      }
+      
+      th, td {
+        padding: 8px;
+        font-size: 16px;
+      }
+      
+      .setup input,
+      .setup select,
+      .setup button {
+        width: 80%;
+        margin: 5px auto;
+      }
+      
+      .stats-row {
+        flex-direction: column;
+      }
+      
+      .player-stat {
+        margin-bottom: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="setup" id="setupSection">
+      <header>Welcome to the Tennis Score Tracker</header>
+      <div class="input-group">
+        <input type="text" id="player1" placeholder="Player 1 Name" />
+      </div>
+      <div class="input-group">
+        <input type="text" id="player2" placeholder="Player 2 Name" />
+      </div>
+      <div class="input-group">
+        <select id="matchFormat">
+          <option value="best3">Best of 3 Sets</option>
+          <option value="best5">Best of 5 Sets</option>
+          <option value="super">Super Tiebreak</option>
+        </select>
+      </div>
+      <button id="startMatch">Start Match</button>
+    </section>
+
+    <div id="coinTossOverlay">
+      <p id="coinTossResult">Coin tossing...</p>
+      <div class="toss-buttons">
+        <button id="chooseServe">Serve</button>
+        <button id="chooseReceive">Receive</button>
+      </div>
+    </div>
+
+    <section class="scoreboard" id="scoreboardSection" style="display: none;">
+      <header id="scoreboardHeader">Tennis Scoreboard</header>
+      <div id="scoreboardContainer"></div>
+      <div class="controls">
+        <div>
+          <button id="increment1">Point Player 1</button>
+          <button class="double-fault-btn" id="doubleFault1">Double Fault</button>
+        </div>
+        <div>
+          <button id="increment2">Point Player 2</button>
+          <button class="double-fault-btn" id="doubleFault2">Double Fault</button>
+        </div>
+        <button class="reset" id="reset">Reset Match</button>
+        <button id="backToStart">Back to Start</button>
+      </div>
+      <div id="matchStatus"></div>
+    </section>
+
+    <section class="results" id="resultsSection">
+      <header>Match Results</header>
+      <div id="resultsContainer"></div>
+      <button id="backToStartFromResults">Back to Start</button>
+    </section>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // DOM elements
+      const elements = {
+        setupSection: document.getElementById("setupSection"),
+        scoreboardSection: document.getElementById("scoreboardSection"),
+        resultsSection: document.getElementById("resultsSection"),
+        scoreboardContainer: document.getElementById("scoreboardContainer"),
+        resultsContainer: document.getElementById("resultsContainer"),
+        startMatch: document.getElementById("startMatch"),
+        reset: document.getElementById("reset"),
+        backToStart: document.getElementById("backToStart"),
+        backToStartFromResults: document.getElementById("backToStartFromResults"),
+        increment1: document.getElementById("increment1"),
+        increment2: document.getElementById("increment2"),
+        doubleFault1: document.getElementById("doubleFault1"),
+        doubleFault2: document.getElementById("doubleFault2"),
+        matchStatusDisplay: document.getElementById("matchStatus"),
+        matchFormatSelect: document.getElementById("matchFormat"),
+        coinTossOverlay: document.getElementById("coinTossOverlay"),
+        coinTossResult: document.getElementById("coinTossResult"),
+        chooseServe: document.getElementById("chooseServe"),
+        chooseReceive: document.getElementById("chooseReceive")
+      };
+
+      // Match state
+      const state = {
+        isSuperTiebreak: false,
+        setCount: 0,
+        maxSets: 0,
+        matchType: "",
+        currentServer: 0,
+        tiebreakInitialServer: 0,
+        tiebreakPointCount: 0,
+        superTiebreakInitialServer: 0,
+        superTiebreakPointCount: 0,
+        setWinners: [],
+        tieBreak: false,
+        tieBreakPoints1: 0,
+        tieBreakPoints2: 0,
+        matchOver: false
+      };
+      
+      // Point values for non-tiebreak scoring
+      const pointValues = [0, 15, 30, 40];
+      
+      // Player objects
+      const player1 = createPlayer("Player 1");
+      const player2 = createPlayer("Player 2");
+      
+      // Helper function to create a player object
+      function createPlayer(name) {
+        return {
+          name,
+          points: 0,
+          games: 0,
+          sets: 0,
+          advantage: false,
+          setScores: [],
+          superPoints: 0,
+          doubleFaults: 0,
+          aces: 0,
+          winners: 0,
+          unforcedErrors: 0
+        };
+      }
+
+      // Set up event listeners
+      elements.startMatch.addEventListener("click", startMatch);
+      elements.increment1.addEventListener("click", () => updateScore(player1, player2));
+      elements.increment2.addEventListener("click", () => updateScore(player2, player1));
+      elements.doubleFault1.addEventListener("click", () => recordDoubleFault(player1, player2));
+      elements.doubleFault2.addEventListener("click", () => recordDoubleFault(player2, player1));
+      elements.backToStart.addEventListener("click", backToStart);
+      elements.backToStartFromResults.addEventListener("click", backToStart);
+      elements.reset.addEventListener("click", resetMatch);
+
+      /**
+       * Records a double fault for a player
+       */
+      function recordDoubleFault(player, opponent) {
+        if (state.matchOver) return;
+        
+        player.doubleFaults++;
+        updateScore(opponent, player); // Double fault gives point to opponent
+        updateDisplay();
+      }
+
+      /**
+       * Starts a new match with the selected format
+       */
+      function startMatch() {
+        // Get player names
+        player1.name = document.getElementById("player1").value || "Player 1";
+        player2.name = document.getElementById("player2").value || "Player 2";
+        
+        // Set match format
+        state.matchType = elements.matchFormatSelect.value;
+        setMatchFormat(state.matchType);
+        
+        // Clear previous set winners
+        state.setWinners = [];
+        
+        // Reset statistics
+        resetStatistics();
+        
+        // Generate scoreboard table based on match format
+        generateScoreboardTable();
+        
+        // Hide toss buttons initially and start coin toss
+        elements.chooseServe.style.display = "none";
+        elements.chooseReceive.style.display = "none";
+        doCoinToss();
+      }
+      
+      /**
+       * Resets all statistics
+       */
+      function resetStatistics() {
+        player1.doubleFaults = 0;
+        player1.aces = 0;
+        player1.winners = 0;
+        player1.unforcedErrors = 0;
+        player2.doubleFaults = 0;
+        player2.aces = 0;
+        player2.winners = 0;
+        player2.unforcedErrors = 0;
+      }
+      
+      /**
+       * Sets match parameters based on selected format
+       */
+      function setMatchFormat(format) {
+        switch(format) {
+          case "best3":
+            state.isSuperTiebreak = false;
+            state.setCount = 3;
+            state.maxSets = 2;
+            break;
+          case "best5":
+            state.isSuperTiebreak = false;
+            state.setCount = 5;
+            state.maxSets = 3;
+            break;
+          case "super":
+            state.isSuperTiebreak = true;
+            break;
+        }
+      }
+
+      /**
+       * Simulates a coin toss to determine first server
+       */
+      function doCoinToss() {
+        elements.coinTossResult.textContent = "Coin tossing...";
+        elements.coinTossOverlay.classList.add("visible"); // FIXED: Use class instead of style
+        
+        // Simulate coin toss delay
+        setTimeout(() => {
+          const tossWinner = Math.random() < 0.5 ? 1 : 2;
+          const tossWinnerName = tossWinner === 1 ? player1.name : player2.name;
+          elements.coinTossResult.textContent = `Coin Toss: ${tossWinnerName} wins the toss.`;
+          elements.chooseServe.style.display = "inline-block";
+          elements.chooseReceive.style.display = "inline-block";
+          
+          // Setup serve choice
+          elements.chooseServe.onclick = () => {
+            state.currentServer = tossWinner;
+            if (state.isSuperTiebreak) { 
+              state.superTiebreakInitialServer = tossWinner; 
+            }
+            startGameplay();
+          };
+          
+          // Setup receive choice
+          elements.chooseReceive.onclick = () => {
+            state.currentServer = tossWinner === 1 ? 2 : 1;
+            if (state.isSuperTiebreak) { 
+              state.superTiebreakInitialServer = state.currentServer; 
+            }
+            startGameplay();
+          };
+        }, 2000);
+      }
+      
+      /**
+       * Starts the gameplay after coin toss
+       */
+      function startGameplay() {
+        elements.coinTossOverlay.classList.remove("visible"); // FIXED: Use class instead of style
+        elements.setupSection.style.display = "none";
+        elements.scoreboardSection.style.display = "block";
+        updateDisplay();
+      }
+
+      /**
+       * Generates the scoreboard table based on match type
+       */
+      function generateScoreboardTable() {
+        let tableHTML = "";
+        
+        if (state.isSuperTiebreak) {
+          // Super tiebreak format
+          tableHTML = createSuperTiebreakTable();
+        } else {
+          // Regular format
+          tableHTML = createRegularMatchTable();
+        }
+        
+        elements.scoreboardContainer.innerHTML = tableHTML;
+      }
+      
+      /**
+       * Creates a super tiebreak table
+       */
+      function createSuperTiebreakTable() {
+        return `
+          <table id='scoreboardTable'>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Super Tiebreak</th>
+                <th>Double Faults</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="row1">
+                <td id="name1">${player1.name}</td>
+                <td id="points1">0</td>
+                <td id="df1">0</td>
+              </tr>
+              <tr id="row2">
+                <td id="name2">${player2.name}</td>
+                <td id="points2">0</td>
+                <td id="df2">0</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+      }
+      
+      /**
+       * Creates a regular match table
+       */
+      function createRegularMatchTable() {
+        let tableHTML = `
+          <table id='scoreboardTable'>
+            <thead>
+              <tr>
+                <th>Player</th>
+        `;
+        
+        // Add set columns
+        for (let i = 1; i <= state.setCount; i++) {
+          tableHTML += `<th>Set ${i}</th>`;
+        }
+        
+        tableHTML += `
+                <th>Game</th>
+                <th>Double Faults</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="row1">
+                <td id="name1">${player1.name}</td>
+        `;
+        
+        // Add set cells for player 1
+        for (let i = 1; i <= state.setCount; i++) {
+          tableHTML += `<td id="set1-${i}"></td>`;
+        }
+        
+        tableHTML += `
+                <td id="points1">0</td>
+                <td id="df1">0</td>
+              </tr>
+              <tr id="row2">
+                <td id="name2">${player2.name}</td>
+        `;
+        
+        // Add set cells for player 2
+        for (let i = 1; i <= state.setCount; i++) {
+          tableHTML += `<td id="set2-${i}"></td>`;
+        }
+        
+        tableHTML += `
+                <td id="points2">0</td>
+                <td id="df2">0</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+        
+        return tableHTML;
+      }
+
+      /**
+       * Updates the score based on player winning a point
+       */
+      function updateScore(current, opponent) {
+        if (state.matchOver) return;
+        
+        if (state.isSuperTiebreak) {
+          handleSuperTiebreakPoint(current, opponent);
+        } else if (state.tieBreak) {
+          handleTiebreakPoint(current, opponent);
+        } else {
+          handleRegularPoint(current, opponent);
+        }
+        
+        updateDisplay();
+      }
+      
+      /**
+       * Handles a point in super tiebreak
+       */
+      function handleSuperTiebreakPoint(current, opponent) {
+        current.superPoints++;
+        state.superTiebreakPointCount++;
+        
+        // Check for win condition
+        if (current.superPoints >= 10 && current.superPoints - opponent.superPoints >= 2) {
+          endMatch(current);
+        }
+      }
+      
+      /**
+       * Handles a point in tiebreak
+       */
+      function handleTiebreakPoint(current, opponent) {
+        // Increment tiebreak points
+        if (current === player1) {
+          state.tieBreakPoints1++;
+        } else {
+          state.tieBreakPoints2++;
+        }
+        state.tiebreakPointCount++;
+        
+        // Determine required points based on match type
+        let requiredPoints = 7;
+        if (state.matchType === "best5" && (player1.sets + player2.sets) === 4) {
+          requiredPoints = 10;
+        }
+        
+        // Check for tiebreak win condition
+        const player1Won = state.tieBreakPoints1 >= requiredPoints && 
+                          state.tieBreakPoints1 - state.tieBreakPoints2 >= 2;
+        const player2Won = state.tieBreakPoints2 >= requiredPoints && 
+                          state.tieBreakPoints2 - state.tieBreakPoints1 >= 2;
+        
+        if (player1Won || player2Won) {
+          const winner = player1Won ? player1 : player2;
+          const loser = player1Won ? player2 : player1;
+          const winnerPoints = player1Won ? state.tieBreakPoints1 : state.tieBreakPoints2;
+          const loserPoints = player1Won ? state.tieBreakPoints2 : state.tieBreakPoints1;
+          
+          // Update set score
+          winner.sets++;
+          winner.setScores.push("7");
+          loser.setScores.push(`6 (${loserPoints})`);
+          state.setWinners.push(winner === player1 ? 1 : 2);
+          
+          // Check if match is over
+          if (winner.sets >= state.maxSets) {
+            endMatch(winner);
+          }
+          
+          // Reset for next set
+          state.tieBreak = false;
+          state.tieBreakPoints1 = 0;
+          state.tieBreakPoints2 = 0;
+          state.tiebreakPointCount = 0;
+          player1.games = 0;
+          player2.games = 0;
+          resetPoints();
+        }
+      }
+      
+      /**
+       * Handles a point in regular scoring
+       */
+      function handleRegularPoint(current, opponent) {
+        if (current.points < 3) {
+          // Simple increment for 0, 15, 30
+          current.points++;
+        } else {
+          if (opponent.points < 3) {
+            // Win game if opponent is below 40
+            winGame(current, opponent);
+            return;
+          } else {
+            if (current.advantage) {
+              // Win game if player has advantage
+              winGame(current, opponent);
+              return;
+            }
+            if (opponent.advantage) {
+              // Reset to deuce
+              opponent.advantage = false;
+            } else {
+              // Set advantage
+              current.advantage = true;
+            }
+          }
+        }
+      }
+      
+      /**
+       * Handles winning a game
+       */
+      function winGame(winner, loser) {
+        winner.games++;
+        state.currentServer = state.currentServer === 1 ? 2 : 1;
+        resetPoints();
+        
+        // Check for tiebreak condition
+        if (player1.games === 6 && player2.games === 6) {
+          state.tieBreak = true;
+          state.tiebreakInitialServer = state.currentServer;
+          state.tiebreakPointCount = 0;
+          updateDisplay();
+          return;
+        }
+        
+        // Check for set win condition
+        if (winner.games >= 6 && (winner.games - loser.games) >= 2) {
+          winner.sets++;
+          player1.setScores.push(player1.games);
+          player2.setScores.push(player2.games);
+          state.setWinners.push((winner === player1) ? 1 : 2);
+          
+          // Check if match is over
+          if (winner.sets >= state.maxSets) {
+            endMatch(winner);
+          }
+          
+          // Reset for next set
+          player1.games = 0;
+          player2.games = 0;
+          resetPoints();
+        } else {
+          // Notify side switch every odd game
+          const setGameCount = player1.games + player2.games;
+          if (setGameCount % 2 === 1) {
+            notifySideSwitch();
+          }
+        }
+      }
+      
+      /**
+       * Ends the match with given winner
+       */
+      function endMatch(winner) {
+        state.matchOver = true;
+        elements.matchStatusDisplay.textContent = `Match Over: ${winner.name} wins the match!`;
+        elements.increment1.disabled = true;
+        elements.increment2.disabled = true;
+        elements.doubleFault1.disabled = true;
+        elements.doubleFault2.disabled = true;
+        
+        // Show results after a short delay
+        setTimeout(showResults, 1500);
+      }
+      
+      /**
+       * Shows the match results with statistics
+       */
+      function showResults() {
+        elements.scoreboardSection.style.display = "none";
+      elements.resultsSection.style.display = "block";
+      
+      const winner = player1.sets > player2.sets ? player1 : player2;
+      const loser = winner === player1 ? player2 : player1;
+      
+      let resultsHTML = `
+        <div class="stats-container">
+          <div class="stats-row stats-header">
+            <div class="player-stat">Player</div>
+            <div class="player-stat">${player1.name}</div>
+            <div class="player-stat">${player2.name}</div>
+          </div>
+          <div class="stats-row">
+            <div class="player-stat">Final Score</div>
+            <div class="player-stat ${winner === player1 ? 'winner-stat' : ''}">${player1.sets}</div>
+            <div class="player-stat ${winner === player2 ? 'winner-stat' : ''}">${player2.sets}</div>
+          </div>
+          <div class="stats-row">
+            <div class="player-stat">Double Faults</div>
+            <div class="player-stat">${player1.doubleFaults}</div>
+            <div class="player-stat">${player2.doubleFaults}</div>
+          </div>
+        </div>
+      `;
+      
+      // Add set details if not super tiebreak
+      if (!state.isSuperTiebreak) {
+        let setDetails = '<div class="stats-container"><h3>Set Details</h3>';
+        
+        for (let i = 0; i < state.setCount; i++) {
+          if (player1.setScores[i] !== undefined) {
+            setDetails += `
+              <div class="stats-row">
+                <div class="player-stat">Set ${i+1}</div>
+                <div class="player-stat ${state.setWinners[i] === 1 ? 'winner-stat' : ''}">${player1.setScores[i]}</div>
+                <div class="player-stat ${state.setWinners[i] === 2 ? 'winner-stat' : ''}">${player2.setScores[i]}</div>
+              </div>
+            `;
+          }
+        }
+        
+        setDetails += '</div>';
+        resultsHTML += setDetails;
+      }
+      
+      elements.resultsContainer.innerHTML = resultsHTML;
+      }
+      
+      /**
+       * Resets points for both players
+       */
+      function resetPoints() {
+        player1.points = 0;
+        player2.points = 0;
+        player1.advantage = false;
+        player2.advantage = false;
+      }
+
+      /**
+       * Notifies players to switch sides
+       */
+      function notifySideSwitch() {
+        const prevText = elements.matchStatusDisplay.textContent;
+        elements.matchStatusDisplay.textContent = "Players switch sides";
+        
+        setTimeout(() => {
+          elements.matchStatusDisplay.textContent = prevText;
+          updateServerIndicator();
+        }, 3000);
+      }
+
+      /**
+       * Resets the match completely
+       */
+      function resetMatch() {
+        // Reset player data
+        resetPlayerData(player1);
+        resetPlayerData(player2);
+        
+        // Reset state
+        state.matchOver = false;
+        state.tieBreak = false;
+        state.tieBreakPoints1 = 0;
+        state.tieBreakPoints2 = 0;
+        state.tiebreakPointCount = 0;
+        state.superTiebreakPointCount = 0;
+        state.setWinners = [];
+        
+        // Reset UI
+        elements.matchStatusDisplay.textContent = "";
+        elements.increment1.disabled = false;
+        elements.increment2.disabled = false;
+        elements.doubleFault1.disabled = false;
+        elements.doubleFault2.disabled = false;
+        
+        updateDisplay();
+      }
+      
+      /**
+       * Resets a player's data
+       */
+      function resetPlayerData(player) {
+        player.points = 0;
+        player.games = 0;
+        player.sets = 0;
+        player.advantage = false;
+        player.setScores = [];
+        player.superPoints = 0;
+        player.doubleFaults = 0;
+        player.aces = 0;
+        player.winners = 0;
+        player.unforcedErrors = 0;
+      }
+      
+      /**
+       * Return to setup screen
+       */
+      function backToStart() {
+        resetMatch();
+        elements.scoreboardSection.style.display = "none";
+        elements.resultsSection.style.display = "none";
+        elements.setupSection.style.display = "block";
+      }
+
+      /**
+       * Updates the display
+       */
+      function updateDisplay() {
+        if (state.isSuperTiebreak) {
+          updateSuperTiebreakDisplay();
+        } else {
+          updateRegularDisplay();
+        }
+      }
+      
+      /**
+       * Updates the display for super tiebreak
+       */
+      function updateSuperTiebreakDisplay() {
+        const cell1 = document.getElementById("points1");
+        const cell2 = document.getElementById("points2");
+        const name1 = document.getElementById("name1");
+        const name2 = document.getElementById("name2");
+        const df1 = document.getElementById("df1");
+        const df2 = document.getElementById("df2");
+        
+        if (!cell1 || !cell2 || !name1 || !name2 || !df1 || !df2) return;
+        
+        cell1.textContent = player1.superPoints;
+        cell2.textContent = player2.superPoints;
+        df1.textContent = player1.doubleFaults;
+        df2.textContent = player2.doubleFaults;
+        
+        // Update winner indicator if match is over
+        if (state.matchOver) {
+          if (player1.superPoints > player2.superPoints) {
+            name1.innerHTML = player1.name + ' <span class="set-win">&#9679;</span>';
+            name2.innerHTML = player2.name;
+          } else {
+            name2.innerHTML = player2.name + ' <span class="set-win">&#9679;</span>';
+            name1.innerHTML = player1.name;
+          }
+        } else {
+          // Update server indicator
+          updateSuperTiebreakServer(name1, name2);
+        }
+      }
+      
+      /**
+       * Updates the server indicator for super tiebreak
+       */
+      function updateSuperTiebreakServer(name1, name2) {
+        let currentSuperTBServer;
+        
+        if (state.superTiebreakPointCount === 0) {
+          currentSuperTBServer = state.superTiebreakInitialServer;
+        } else {
+          const block = Math.floor((state.superTiebreakPointCount - 1) / 2);
+          currentSuperTBServer = (block % 2 === 0) 
+            ? (3 - state.superTiebreakInitialServer)
+            : state.superTiebreakInitialServer;
+        }
+        
+        if (currentSuperTBServer === 1) {
+          name1.innerHTML = player1.name + ' <span class="server-indicator">&#9679;</span>';
+          name2.innerHTML = player2.name;
+        } else {
+          name2.innerHTML = player2.name + ' <span class="server-indicator">&#9679;</span>';
+          name1.innerHTML = player1.name;
+        }
+      }
+      
+      /**
+       * Updates the display for regular match
+       */
+      function updateRegularDisplay() {
+        updatePlayerDisplay(player1, 1);
+        updatePlayerDisplay(player2, 2);
+        
+        // Update tiebreak points if in tiebreak
+        if (state.tieBreak) {
+          document.getElementById("points1").textContent = state.tieBreakPoints1;
+          document.getElementById("points2").textContent = state.tieBreakPoints2;
+        }
+        
+        // Update double faults
+        document.getElementById("df1").textContent = player1.doubleFaults;
+        document.getElementById("df2").textContent = player2.doubleFaults;
+        
+        updateServerIndicator();
+      }
+      
+      /**
+       * Updates the display for a player
+       */
+      function updatePlayerDisplay(player, playerNumber) {
+        // Update set scores
+        for (let i = 1; i <= state.setCount; i++) {
+          const cell = document.getElementById(`set${playerNumber}-${i}`);
+          if (!cell) continue;
+          
+          if (player.setScores[i - 1] !== undefined) {
+            // Display completed set score
+            cell.textContent = player.setScores[i - 1];
+            
+            // Highlight winning set
+            if (state.setWinners[i - 1] === playerNumber) {
+              cell.classList.add("set-win");
+            } else {
+              cell.classList.remove("set-win");
+            }
+          } else if (i === player.setScores.length + 1 && !state.matchOver) {
+            // Display current set games
+            cell.textContent = player.games;
+            cell.classList.remove("set-win");
+          } else {
+            // Empty cell for future sets
+            cell.textContent = "";
+            cell.classList.remove("set-win");
+          }
+        }
+        
+        // Update points display
+        const pointsCell = document.getElementById(`points${playerNumber}`);
+        if (pointsCell && !state.tieBreak) {
+          pointsCell.textContent = player.advantage ? "Ad" : (pointValues[player.points] || 0);
+        }
+      }
+
+      /**
+       * Updates the server indicator
+       */
+      function updateServerIndicator() {
+        if (state.isSuperTiebreak) return;
+        
+        const cell1 = document.getElementById("name1");
+        const cell2 = document.getElementById("name2");
+        
+        if (!cell1 || !cell2) return;
+        
+        // Reset names
+        cell1.innerHTML = player1.name;
+        cell2.innerHTML = player2.name;
+        
+        if (state.tieBreak) {
+          // Tiebreak server logic
+          const currentTieBreakServer = getTiebreakServer();
+          
+          if (currentTieBreakServer === 1) {
+            cell1.innerHTML += ' <span class="server-indicator">&#9679;</span>';
+          } else {
+            cell2.innerHTML += ' <span class="server-indicator">&#9679;</span>';
+          }
+        } else {
+          // Regular server indicator
+          if (state.currentServer === 1) {
+            cell1.innerHTML += ' <span class="server-indicator">&#9679;</span>';
+          } else {
+            cell2.innerHTML += ' <span class="server-indicator">&#9679;</span>';
+          }
+        }
+      }
+      
+      /**
+       * Calculates the current server during tiebreak
+       */
+      function getTiebreakServer() {
+        if (state.tiebreakPointCount === 0) {
+          return state.tiebreakInitialServer;
+        }
+        
+        const block = Math.floor((state.tiebreakPointCount - 1) / 2);
+        return (block % 2 === 0) 
+          ? (3 - state.tiebreakInitialServer)
+          : state.tiebreakInitialServer;
+      }
+    });
+  </script>
+</body>
+</html>
